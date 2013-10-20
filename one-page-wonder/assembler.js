@@ -1,6 +1,7 @@
 #!/usr/bin/node
 var fs = require('fs'),
-    args = process.argv.splice(2);
+    args = process.argv.splice(2),
+    debugFlag = false;
 
 if(args.length != 1){
   help();
@@ -11,10 +12,16 @@ function help() {
   console.log("usage:\n\tassembly.js FILE");
 }
 
+function debug(Str) {
+  if (debugFlag) {
+    console.log(Str);
+  }
+};
+
 function wrapComment(Str, SrcStr) {
-  var BeginComment = "\n<-------- inserted by assembly.js from " + SrcStr +
+  var BeginComment = "\n<!-------- inserted by assembly.js from " + SrcStr +
     " begin -------->\n\n";
-  var EndComment   = "\n<-------- inserted by assembly.js from " + SrcStr +
+  var EndComment   = "\n<!-------- inserted by assembly.js from " + SrcStr +
     " end -------->\n";
 
   return BeginComment + Str + EndComment;
@@ -22,25 +29,28 @@ function wrapComment(Str, SrcStr) {
 
 function insertLocalFiles(data, tagRegex, srcRegex) {
   var newData = data.replace(tagRegex, function(match) {
-                  var srcStr;
+                  var srcStr,
+                      matchedSrc = match.match(srcRegex);
 
-                  if (match.match(srcRegex)) {
-                    srcStr = match.match(srcRegex)[1];
+                  debug("match: " + match);
+
+                  if (matchedSrc) {
+                    srcStr = matchedSrc[1];
                   };
 
-                  console.log("srcStr: " + srcStr);
+                  debug("srcStr: " + srcStr);
                   if (srcStr) {
                     try {
                       hrefData = fs.readFileSync(srcStr);
-                      console.log("srcData: " + hrefData);
+                      debug("srcData: " + hrefData);
                       return wrapComment(hrefData, srcStr);
                     } catch(readErr) {
-                      console.log("[info] Skipping " + srcStr);
+                      debug("[info] Skipping " + srcStr);
                       return match;
                     };
                   }
 
-                  console.log("[info] Skipping " + srcStr);
+                  debug("Skipping " + srcStr);
                   return match;
                 });
 
@@ -56,10 +66,10 @@ fs.readFile(fileName, 'utf8', function(err, data) {
   }
   var scriptRegex  = /<\s*script[\S\s]*?script\s*>/g,
       srcRegex     = /src\s*=\s*\"([^\"]*)\"/,
-      cssLinkRegex = /<\s*link[\S\s]*?type\s*=\s*\"[\S\s]*css[\S\s]*"[\S\s]*?link\s*>/g,
+      cssLinkRegex = /<\s*link[\S\s]*?type=\"text\/css\"[\S\s]*?link\s*>/g,
       hrefRegex    = /href\s*=\s*\"([^\"]*)\"/;
 
   var newData0 = insertLocalFiles(data, scriptRegex, srcRegex);
   var newData  = insertLocalFiles(newData0, cssLinkRegex, hrefRegex);
-  console.log("newData: " + newData);
+  console.log(newData);
 });
