@@ -20,6 +20,33 @@ function wrapComment(Str, SrcStr) {
   return BeginComment + Str + EndComment;
 };
 
+function insertLocalFiles(data, tagRegex, srcRegex) {
+  var newData = data.replace(tagRegex, function(match) {
+                  var srcStr;
+
+                  if (match.match(srcRegex)) {
+                    srcStr = match.match(srcRegex)[1];
+                  };
+
+                  console.log("srcStr: " + srcStr);
+                  if (srcStr) {
+                    try {
+                      hrefData = fs.readFileSync(srcStr);
+                      console.log("srcData: " + hrefData);
+                      return wrapComment(hrefData, srcStr);
+                    } catch(readErr) {
+                      console.log("[info] Skipping " + srcStr);
+                      return match;
+                    };
+                  }
+
+                  console.log("[info] Skipping " + srcStr);
+                  return match;
+                });
+
+  return newData;
+};
+
 var fileName = args[0];
 
 fs.readFile(fileName, 'utf8', function(err, data) {
@@ -27,22 +54,12 @@ fs.readFile(fileName, 'utf8', function(err, data) {
     console.log("Error reading file: " + fileName);
     return -1;
   }
-  var scriptRegex = /<\s*script[\S\s]*?script\s*>/g;
-  var newData = data.replace(scriptRegex, function(match) {
-                  var srcRegex = /src\s*=\s*\"([\s\S]*)\"/;
-                  srcStr = match.match(srcRegex)[1];
-                  console.log("srcStr: " + srcStr);
-                  if (srcStr) {
-                    try {
-                      srcData = fs.readFileSync(srcStr);
-                      console.log("srcData: " + srcData);
-                      return "2) " + wrapComment(srcData, srcStr);
-                    } catch(readErr) {
-                      return "3) " + match;
-                    };
-                  }
+  var scriptRegex  = /<\s*script[\S\s]*?script\s*>/g,
+      srcRegex     = /src\s*=\s*\"([^\"]*)\"/,
+      cssLinkRegex = /<\s*link[\S\s]*?type\s*=\s*\"[\S\s]*css[\S\s]*"[\S\s]*?link\s*>/g,
+      hrefRegex    = /href\s*=\s*\"([^\"]*)\"/;
 
-                  return "4) " + match;
-                });
+  var newData0 = insertLocalFiles(data, scriptRegex, srcRegex);
+  var newData  = insertLocalFiles(newData0, cssLinkRegex, hrefRegex);
   console.log("newData: " + newData);
 });
