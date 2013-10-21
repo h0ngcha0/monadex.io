@@ -1,4 +1,4 @@
-$(document).ready(function(){
+$(function readFunction() {
   /* smooth-scroll */
   $("ul.navbar-nav a").smoothScroll({
     offset: 30,
